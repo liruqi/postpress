@@ -35,6 +35,7 @@ program
                 input: options.input,
                 output: options.output,
                 copy: options.copy,
+                math: options.math === true,
             });
             console.log(JSON.stringify({ target, ...result }, null, 2));
         } catch (error) {
