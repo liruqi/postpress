@@ -13,14 +13,17 @@ const DOCS_DIR = join(process.cwd(), 'docs');
 const SKIP_DIRS = new Set(['bugs', 'archive']);
 
 function extractFrontMatter(content) {
-  const match = content.match(/^---\n([\s\S]*?)\n---/);
-  if (!match) return { summary: '', readWhen: [] };
+    // Normalize CRLF: docs checked out on Windows use \r\n, which the
+    // front-matter regex below would not match.
+    const normalized = content.replace(/\r\n/g, '\n');
+    const match = normalized.match(/^---\n([\s\S]*?)\n---/);
+    if (!match) return { summary: '', readWhen: [] };
 
-  const fm = match[1];
+    const fm = match[1];
 
-  // Extract summary
-  const summaryMatch = fm.match(/^summary:\s*['"]?(.*?)['"]?\s*$/m);
-  const summary = summaryMatch ? summaryMatch[1].trim() : '';
+    // Extract summary
+    const summaryMatch = fm.match(/^summary:\s*['"]?(.*?)['"]?\s*$/m);
+    const summary = summaryMatch ? summaryMatch[1].trim() : '';
 
   // Extract read_when (YAML list or inline array)
   const readWhen = [];
@@ -62,9 +65,11 @@ function walkDocs(dir) {
       const { summary, readWhen } = extractFrontMatter(content);
       if (summary) {
         results.push({
-          path: relative(process.cwd(), fullPath),
-          summary,
-          readWhen
+            // Windows reports `docs\research\foo.md`; keep paths POSIX-style
+            // so output is identical across platforms.
+            path: relative(process.cwd(), fullPath).replace(/\\/g, '/'),
+            summary,
+            readWhen
         });
       }
     }
