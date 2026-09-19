@@ -79,6 +79,26 @@ beforeAll(async () => {
         );
     }
 
+    // Generate a "flat" SVG — no ids, no gradients, no foreignObject.
+    // Deliberately carries the things WeChat strips (id, <style>, <script>, <a>)
+    // and omits width/height so the sanitizer has to derive them from viewBox.
+    const flatPath = path.join(FIXTURES_DIR, 'flat.svg');
+    if (!fs.existsSync(flatPath)) {
+        fs.writeFileSync(
+            flatPath,
+            `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <style>.label{fill:#6e6e73}</style>
+  <script>alert('xss')</script>
+  <circle id="bg" cx="60" cy="60" r="56" fill="#f5f5f7" stroke="#e5e5ea" stroke-width="1"/>
+  <rect id="doc" x="30" y="24" width="60" height="72" rx="6" fill="#667eea"/>
+  <line x1="40" y1="42" x2="80" y2="42" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="40" y1="56" x2="80" y2="56" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="40" y1="70" x2="62" y2="70" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <a href="https://example.com"><text x="60" y="110" text-anchor="middle" font-size="9" fill="#6e6e73">postpress</text></a>
+</svg>`,
+        );
+    }
+
     // Generate a large image (3000x3000 to test compression)
     const largePngPath = path.join(FIXTURES_DIR, 'large.png');
     if (!fs.existsSync(largePngPath)) {
@@ -154,12 +174,63 @@ describe('rehypeBase64Images', () => {
         ).rejects.toThrow('Image too small');
     });
 
-    it('should rasterize SVG to PNG base64', async () => {
+    it('should keep plain SVG as vector data URI', async () => {
+        const md = `![alt](images/flat.svg)`;
+        const html = await processWithPlugin(md, rehypeBase64Images, {
+            baseDir: path.resolve(__dirname, '../fixtures'),
+        });
+        expect(html).toContain('src="data:image/svg+xml;base64,');
+    });
+
+    it('should sanitize SVG markup for the WeChat editor', async () => {
+        const md = `![alt](images/flat.svg)`;
+        const html = await processWithPlugin(md, rehypeBase64Images, {
+            baseDir: path.resolve(__dirname, '../fixtures'),
+        });
+        const match = html.match(/src="data:image\/svg\+xml;base64,([^"]+)"/);
+        expect(match).toBeTruthy();
+        const svg = Buffer.from(match![1], 'base64').toString('utf8');
+
+        // ids, <style>, <script> and <a> are dropped by the editor or unsafe
+        expect(svg).not.toContain('id=');
+        expect(svg).not.toContain('<style');
+        expect(svg).not.toContain('<script');
+        expect(svg).not.toContain('<a ');
+        // explicit px size (iOS) derived from viewBox, xmlns kept
+        expect(svg).toContain('width="120"');
+        expect(svg).toContain('height="120"');
+        expect(svg).toContain('xmlns="http://www.w3.org/2000/svg"');
+        // content survives
+        expect(svg).toContain('<rect');
+        expect(svg).toContain('postpress');
+    });
+
+    it('should rasterize SVG that depends on url(#id) references (auto mode)', async () => {
         const md = `![alt](images/icon.svg)`;
         const html = await processWithPlugin(md, rehypeBase64Images, {
             baseDir: path.resolve(__dirname, '../fixtures'),
         });
+        // icon.svg uses fill="url(#docGrad)" / filter="url(#shadow)" — ids are
+        // deleted by the WeChat editor, so vector output would render empty.
         expect(html).toContain('src="data:image/png;base64,');
         expect(html).not.toContain('image/svg+xml');
+    });
+
+    it('should keep url(#id) SVG as vector when svgMode is "vector"', async () => {
+        const md = `![alt](images/icon.svg)`;
+        const html = await processWithPlugin(md, rehypeBase64Images, {
+            baseDir: path.resolve(__dirname, '../fixtures'),
+            svgMode: 'vector',
+        });
+        expect(html).toContain('src="data:image/svg+xml;base64,');
+    });
+
+    it('should rasterize SVG when svgMode is "raster"', async () => {
+        const md = `![alt](images/flat.svg)`;
+        const html = await processWithPlugin(md, rehypeBase64Images, {
+            baseDir: path.resolve(__dirname, '../fixtures'),
+            svgMode: 'raster',
+        });
+        expect(html).toContain('src="data:image/png;base64,');
     });
 });

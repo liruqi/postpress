@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <style>.label{fill:#6e6e73}</style>
+  <script>alert('xss')</script>
+  <circle id="bg" cx="60" cy="60" r="56" fill="#f5f5f7" stroke="#e5e5ea" stroke-width="1"/>
+  <rect id="doc" x="30" y="24" width="60" height="72" rx="6" fill="#667eea"/>
+  <line x1="40" y1="42" x2="80" y2="42" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="40" y1="56" x2="80" y2="56" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <line x1="40" y1="70" x2="62" y2="70" stroke="#ffffff" stroke-width="3" stroke-linecap="round"/>
+  <a href="https://example.com"><text x="60" y="110" text-anchor="middle" font-size="9" fill="#6e6e73">postpress</text></a>
+</svg>

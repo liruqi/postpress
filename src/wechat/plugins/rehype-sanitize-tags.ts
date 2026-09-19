@@ -1,6 +1,7 @@
 import type { Plugin } from 'unified';
 import type { Root, Element, Text, ElementContent } from 'hast';
 import { visit, SKIP } from 'unist-util-visit';
+import { svgSizeFromViewBox } from '../svg.ts';
 
 /** Tags allowed in WeChat MP editor output. */
 const ALLOWED_TAGS = new Set([
@@ -204,6 +205,16 @@ export const rehypeSanitizeTags: Plugin<[], Root> = () => {
                         delete props.style;
                     } else {
                         props.style = sanitizedStyle;
+                    }
+                }
+
+                // Inline <svg>: iOS needs explicit numeric width/height.
+                // Derive them from viewBox when the author omitted them.
+                if (node.tagName === 'svg') {
+                    const size = svgSizeFromViewBox(props.viewBox);
+                    if (size) {
+                        if (props.width === undefined) props.width = size.width;
+                        if (props.height === undefined) props.height = size.height;
                     }
                 }
             }
