@@ -44,6 +44,7 @@ markdown → remark (mdast) → rehype (hast) → transform hast → serialize t
 - 6 rehype plugins (all implemented, tested):
   - `rehypeSanitizeTags` — tag whitelist, div→section, checkbox→Unicode, attribute cleanup
   - `rehypeMermaid` — mermaid code blocks → Playwright 2x PNG base64 (optional)
+  - `rehypeMath` — math → MathJax self-contained SVG (optional, --math)
   - `rehypeBase64Images` — local images → sharp compress (2MB limit) → base64 data URI
   - `rehypeCodeHighlight` — highlight.js syntax highlighting + whitespace protection (nbsp, br)
   - `rehypeFootnoteLinks` — external links → footnotes + References section, preserve mp.weixin.qq.com
@@ -101,10 +102,11 @@ Pipeline execution order (order matters):
 Markdown → remarkParse → remarkGfm → remarkRehype → rehypeRaw
   → 1. rehypeSanitizeTags
   → 2. rehypeMermaid
-  → 3. rehypeBase64Images
-  → 4. rehypeCodeHighlight
-  → 5. rehypeFootnoteLinks
-  → 6. rehypeInlineStyles
+  → 3. rehypeMath
+  → 4. rehypeBase64Images
+  → 5. rehypeCodeHighlight
+  → 6. rehypeFootnoteLinks
+  → 7. rehypeInlineStyles
   → rehypeStringify → HTML → (optional) clipboard
 ```
 

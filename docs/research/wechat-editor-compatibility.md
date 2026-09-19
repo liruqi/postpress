@@ -155,9 +155,27 @@ font-family: "mp-quote", PingFang SC, system-ui, -apple-system, BlinkMacSystemFo
 5. 避免嵌套 SVG
 6. SVG 内 `<image>` 标签的图片需转为 base64 Data URI（注意微信对此支持不可靠，优先考虑不使用 `<image>`）
 
+#### 2026-09-19 实测补充（19 项探针逐条粘贴验证）
+
+| 探针 | 内容 | 结果 |
+|------|------|------|
+| 7 | `<img src="data:image/png;base64,...">` | 正常显示 |
+| 8 | 内联 `<svg>` | 正常显示 |
+| 18 | `<img src="data:image/svg+xml;base64,...">` | 正常显示 |
+| 19 | 2x PNG（Retina） | 正常显示 |
+
+结论：**`data:image/svg+xml;base64` 在公众号编辑器中可用**，此前"微信不支持 SVG data URI，
+必须栅格化为 PNG"的假设不成立。PostPress 已改为默认保留矢量 SVG：
+
+- `src/wechat/svg.ts` — SVG 清洗（去 `id`/`<style>`/`<script>`/`<a>`、补 `width`/`height`/`xmlns`）
+- `rehype-base64-images` — 默认输出 `data:image/svg+xml;base64`，仅在依赖 `url(#id)` /
+  `<foreignObject>` / 嵌套 SVG 时降级为 PNG（`svgMode: auto`）
+- `rehype-math` — 公式走 MathJax SVG（见 `docs/math.md`）
+
 #### Mermaid 图表的特殊处理（2026-02-22 实测）
 
 微信不支持内联 SVG 的复杂子集（mermaid 生成的 SVG 包含 `<style>`、`<foreignObject>`、`id` 等），因此 mermaid 图表必须转为 PNG 位图。
+注意：这不是因为微信不支持 SVG（见上方 2026-09-19 实测），而是 mermaid 的 SVG 依赖了被编辑器剥离的特性。
 
 **采用方案：** Playwright Chromium 截图（`deviceScaleFactor: 2`）+ `<img width>` 控制显示尺寸。
 
