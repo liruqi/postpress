@@ -73,6 +73,64 @@ describe('rehypeFootnoteLinks', () => {
         expect(html).not.toContain('References');
     });
 
+    it('should render Wikipedia links as colored inline terms', async () => {
+        const md = '[猜想](https://en.wikipedia.org/wiki/conjecture)';
+        const html = await processWithPlugin(md, rehypeFootnoteLinks);
+        expect(html).toContain('猜想');
+        expect(html).toContain('#2e8555');
+        expect(html).not.toContain('<sup>');
+        expect(html).not.toContain('<a');
+        expect(html).not.toContain('en.wikipedia.org');
+    });
+
+    it('should not add a References section for term-only links', async () => {
+        const md = '[素数](https://en.wikipedia.org/wiki/prime_numbers) 是 [自然数](https://en.wikipedia.org/wiki/natural_number) 的一种。';
+        const html = await processWithPlugin(md, rehypeFootnoteLinks);
+        expect(html).not.toContain('References');
+        expect(html).not.toContain('<sup>');
+    });
+
+    it('should keep footnotes for non-term hosts alongside colored terms', async () => {
+        const md = '[猜想](https://en.wikipedia.org/wiki/conjecture) 与 [论文](https://arxiv.org/abs/1234)';
+        const html = await processWithPlugin(md, rehypeFootnoteLinks);
+        expect(html).toContain('#2e8555');
+        expect(html).toContain('<sup>[1]</sup>');
+        expect(html).toContain('References');
+        expect(html).toContain('https://arxiv.org/abs/1234');
+        // Only the arxiv URL is footnoted, so it takes number 1
+        expect(html).not.toContain('[2]');
+    });
+
+    it('should match term hosts by subdomain suffix', async () => {
+        const html = await processWithPlugin(
+            '[X](https://en.m.wikipedia.org/wiki/y)',
+            rehypeFootnoteLinks,
+            { termHosts: ['wikipedia.org'] },
+        );
+        expect(html).toContain('#2e8555');
+        expect(html).not.toContain('<sup>');
+    });
+
+    it('should fall back to footnotes when term hosts are disabled', async () => {
+        const html = await processWithPlugin(
+            '[猜想](https://en.wikipedia.org/wiki/conjecture)',
+            rehypeFootnoteLinks,
+            { termHosts: [] },
+        );
+        expect(html).toContain('<sup>');
+        expect(html).toContain('References');
+        expect(html).not.toContain('#2e8555');
+    });
+
+    it('should honour a custom term color', async () => {
+        const html = await processWithPlugin(
+            '[猜想](https://en.wikipedia.org/wiki/conjecture)',
+            rehypeFootnoteLinks,
+            { termColor: '#ff0000' },
+        );
+        expect(html).toContain('#ff0000');
+    });
+
     it('should number different URLs sequentially', async () => {
         const md = '[A](https://a.com) and [B](https://b.com)';
         const html = await processWithPlugin(md, rehypeFootnoteLinks);

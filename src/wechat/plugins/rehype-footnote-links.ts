@@ -1,8 +1,27 @@
 import type { Plugin } from 'unified';
 import type { Root, Element, ElementContent } from 'hast';
 import { visit, SKIP } from 'unist-util-visit';
+import { TERM_LINK_COLOR } from '../styles/default.ts';
 
 type LinkType = 'wechat' | 'anchor' | 'external';
+
+/** Hosts rendered as colored inline terms instead of numbered footnotes. */
+const DEFAULT_TERM_HOSTS = ['en.wikipedia.org'];
+
+export interface FootnoteLinksOptions {
+    /**
+     * Hosts whose links become colored inline terms instead of footnotes.
+     * Matched exactly or as a subdomain suffix. Default: ['en.wikipedia.org'].
+     */
+    termHosts?: string[];
+    /** Color applied to those inline terms. Default: TERM_LINK_COLOR. */
+    termColor?: string;
+}
+
+/** True when `hostname` equals `host` or is a subdomain of it. */
+function matchesHost(hostname: string, host: string): boolean {
+    return hostname === host || hostname.endsWith(`.${host}`);
+}
 
 /**
  * Classify a link by type.
@@ -32,12 +51,17 @@ function classifyLink(href: string): LinkType {
  * Rehype plugin: convert external links to footnote references.
  *
  * - External <a> tags → link text + <sup>[N]</sup>
+ * - Links to "term" hosts (Wikipedia by default) → colored inline text, no
+ *   footnote: the URL is unreadable noise in a WeChat article anyway
  * - Duplicate URLs share the same footnote number
  * - mp.weixin.qq.com links are preserved as <a>
  * - Anchor and relative links are preserved as <a>
  * - Appends a References section at the end of the document
  */
-export const rehypeFootnoteLinks: Plugin<[], Root> = () => {
+export const rehypeFootnoteLinks: Plugin<[FootnoteLinksOptions?], Root> = (options) => {
+    const termHosts = options?.termHosts ?? DEFAULT_TERM_HOSTS;
+    const termColor = options?.termColor ?? TERM_LINK_COLOR;
+
     return (tree: Root) => {
         const urlMap = new Map<string, number>();
         const footnotes: Array<{ index: number; url: string; text: string }> = [];
@@ -59,6 +83,23 @@ export const rehypeFootnoteLinks: Plugin<[], Root> = () => {
             if (linkType === 'anchor') {
                 parent.children.splice(index, 1, ...node.children);
                 return [SKIP, index + node.children.length];
+            }
+
+            // Term hosts: drop the link and the footnote, keep colored text
+            let hostname = '';
+            try {
+                hostname = new URL(href).hostname;
+            } catch {
+                hostname = '';
+            }
+            if (hostname && termHosts.some((host) => matchesHost(hostname, host))) {
+                parent.children.splice(index, 1, {
+                    type: 'element',
+                    tagName: 'span',
+                    properties: { style: `color: ${termColor};` },
+                    children: node.children,
+                });
+                return [SKIP, index + 1];
             }
 
             // External links: convert to footnote reference

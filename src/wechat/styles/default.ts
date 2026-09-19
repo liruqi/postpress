@@ -15,6 +15,13 @@ const FONT_MONO = 'Menlo,Consolas,Monaco,"Courier New",monospace';
 const F = `font-family: ${FONT_BODY};`;
 const FM = `font-family: ${FONT_MONO};`;
 
+/**
+ * Color for "term" links — external links to reference sites (Wikipedia by
+ * default) that are rendered as colored inline text instead of a numbered
+ * footnote. Keeping the color here means every color token stays in one file.
+ */
+export const TERM_LINK_COLOR = '#2e8555';
+
 export const defaultStyles: StyleMap = {
     // Headings — 600 weight (h1 is downgraded to h2 by sanitize plugin)
     h2: `${F} font-size: 20px; font-weight: 600; margin: 32px 0 12px; line-height: 1.25; color: #1d1d1f;`,
