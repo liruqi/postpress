@@ -109,6 +109,40 @@ describe('rehypeMath', () => {
         expect(html).not.toContain('data:image/svg+xml');
     });
 
+    it('renders # (Markdown unescapes \\# to a bare hash)', async () => {
+        const html = await renderMath('设 $n \\ge 120569\\#$ 成立');
+        const svg = decodeSvg(html);
+        // A bare # is the TeX macro parameter character: MathJax would emit an
+        // <merror> box (a black bar) instead of the formula.
+        expect(svg).not.toContain('data-mjx-error');
+        expect(svg).not.toContain('merror');
+        expect(svg).toContain('<path');
+    });
+
+    it('renders % (Markdown unescapes \\% to a bare percent)', async () => {
+        const html = await renderMath('$50\\%$');
+        const svg = decodeSvg(html);
+        expect(svg).not.toContain('data-mjx-error');
+        expect(svg).toContain('<path');
+    });
+
+    it('leaves untypeset formulas as source text instead of an error box', async () => {
+        // An unknown environment makes MathJax emit <merror> — a full-width
+        // rect painted in the glyph color, i.e. a black bar in the article.
+        const html = await renderMath('$$\\begin{nope}x\\end{nope}$$');
+        expect(html).not.toContain('data:image/svg+xml');
+        expect(html).toContain('\\begin{nope}x\\end{nope}');
+    });
+
+    it('does not put raw TeX in an alt attribute', async () => {
+        const html = await renderMath('设 $n>1$ 时');
+        // A bare > inside alt="..." makes the WeChat parser end the <img> early
+        // and spill the rest of the tag into the article as text.
+        const img = (html.match(/<img[^>]*>/) ?? [''])[0];
+        expect(img).not.toContain('alt=');
+        expect(html).toContain('data:image/svg+xml;base64,');
+    });
+
     it('is a no-op when disabled', async () => {
         const html = await processWithPlugin('$$a+b$$', rehypeMathDirect, { enabled: false });
         expect(html).not.toContain('data:image/svg+xml');

@@ -135,6 +135,18 @@ function round(value: number): string {
     return String(Math.round(value * 100) / 100);
 }
 
+/**
+ * Re-escape the TeX-special characters Markdown already unescaped.
+ *
+ * remark turns `\#` and `\%` in the source into bare `#` and `%`, but TeX reads
+ * `#` as the macro parameter character and `%` as a comment, so MathJax gives
+ * up and emits an `<merror>` box instead of the formula. Anything that Markdown
+ * left escaped (`\#`) is preceded by a backslash and is left alone.
+ */
+function protectTex(tex: string): string {
+    return tex.replace(/(^|[^\\])([#%])/g, (_match, prefix: string, char: string) => `${prefix}\\${char}`);
+}
+
 /** Rewrite MathJax's SVG output into a self-contained, px-sized SVG. */
 function finalizeSvg(
     raw: string,
@@ -249,13 +261,21 @@ async function createMathRenderer(
 
     return {
         render(tex: string, display: boolean) {
-            const node = doc.convert(tex, {
+            const node = doc.convert(protectTex(tex), {
                 display,
                 em,
                 ex,
                 containerWidth: 100000, // never break display math across lines
             });
             const markup = String(adaptor.outerHTML(node));
+
+            // MathJax reports bad TeX as an <merror> node: a full-width <rect>
+            // painted in the glyph color, i.e. a black bar. Better to fail here
+            // and let the caller keep the source text than to ship that box.
+            const failed = markup.match(/data-mjx-error="([^"]*)"/);
+            if (failed) {
+                throw new Error(`MathJax could not typeset "${tex}": ${failed[1]}`);
+            }
 
             // MathJax wraps its output in <mjx-container>; only the inner
             // <svg> is embeddable as an image data URI.
@@ -312,7 +332,10 @@ function buildImage(tex: string, display: boolean, rendered: RenderedMath): Elem
         tagName: 'img',
         properties: {
             src: dataUri,
-            alt: tex,
+            // Deliberately no `alt`: the source TeX often contains `<` and `>`
+            // ("$n>1$"), and a bare `>` inside an attribute value makes WeChat's
+            // parser end the tag early — the rest of the tag then leaks into the
+            // article as visible text. Nothing here can read alt anyway.
             ...(rendered.width ? { width: rendered.width } : {}),
             ...(rendered.height ? { height: rendered.height } : {}),
             style,
@@ -349,15 +372,13 @@ export const rehypeMath: Plugin<[MathOptions?], Root> = (options = {}) => {
         }
 
         const renderer = await createMathRenderer(em, ex, color);
+        const failures: string[] = [];
 
         for (const [parent, list] of byParent) {
             // Descending index: each splice leaves the remaining ones valid
             list.sort((a, b) => b.index - a.index);
 
-            let failed: Error | null = null;
-
             for (const { index, node } of list) {
-                if (failed) break;
                 const segments = tokenizeMath(node.value, inline);
                 if (!segments) continue;
 
@@ -372,8 +393,9 @@ export const rehypeMath: Plugin<[MathOptions?], Root> = (options = {}) => {
                         nodes.push(buildImage(segment.tex, segment.display, rendered));
                     } catch (error) {
                         // Keep the source text so a single bad formula doesn't
-                        // fail the whole document
-                        failed = error instanceof Error ? error : new Error(String(error));
+                        // fail the whole document. Raw TeX is at least readable
+                        // — a black MathJax error box is not.
+                        failures.push(error instanceof Error ? error.message : String(error));
                         nodes.push({
                             type: 'text',
                             value: segment.display
@@ -389,8 +411,13 @@ export const rehypeMath: Plugin<[MathOptions?], Root> = (options = {}) => {
                     ...(nodes as Array<RootContent | ElementContent>),
                 );
             }
+        }
 
-            if (failed) throw failed;
+        if (failures.length > 0) {
+            console.warn(
+                `postpress: ${failures.length} formula(s) could not be typeset and were left as source text:\n` +
+                    failures.map((message) => `  - ${message}`).join('\n'),
+            );
         }
     };
 };
