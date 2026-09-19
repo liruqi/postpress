@@ -25,6 +25,7 @@ program
     .requiredOption('-o, --output <path>', 'Output HTML file path')
     .option('-t, --target <target>', 'Render target: wechat | x | twitter', 'wechat')
     .option('-c, --copy', 'Copy rendered HTML to system clipboard')
+    .option('--math', 'Render $...$ / $$...$$ math as inline SVG (WeChat target)')
     .action(async (options) => {
         try {
             const target = normalizeTarget(options.target);

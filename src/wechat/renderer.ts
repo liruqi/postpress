@@ -9,6 +9,7 @@ import rehypeStringify from 'rehype-stringify';
 import {
     rehypeSanitizeTags,
     rehypeMermaid,
+    rehypeMath,
     rehypeBase64Images,
     rehypeCodeHighlight,
     rehypeFootnoteLinks,
@@ -19,6 +20,8 @@ export interface RenderOptions {
     input: string;
     output: string;
     copy?: boolean;
+    /** Render $...$ / $$...$$ math as inline SVG. Default: false */
+    math?: boolean;
 }
 
 export interface RenderResult {
@@ -51,6 +54,7 @@ export async function render(options: RenderOptions): Promise<RenderResult> {
         .use(rehypeRaw)
         .use(rehypeSanitizeTags)
         .use(rehypeMermaid)
+        .use(rehypeMath, { enabled: options.math === true })
         .use(rehypeBase64Images, { baseDir: inputDir })
         .use(rehypeCodeHighlight)
         .use(rehypeFootnoteLinks)
