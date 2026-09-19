@@ -47,7 +47,8 @@ markdown → remark (mdast) → rehype (hast) → transform hast → serialize t
   - `rehypeMath` — math → MathJax self-contained SVG (optional, --math)
   - `rehypeBase64Images` — local images → sharp compress (2MB limit) → base64 data URI
   - `rehypeCodeHighlight` — highlight.js syntax highlighting + whitespace protection (nbsp, br)
-  - `rehypeFootnoteLinks` — external links → footnotes + References section, preserve mp.weixin.qq.com
+  - `rehypeFootnoteLinks` — external links → footnotes + References section, preserve mp.weixin.qq.com;
+    term hosts (en.wikipedia.org) → colored inline text (`#2e8555`), no footnote
   - `rehypeInlineStyles` — default styles + hljs colors → inline style attr, remove className
 - Style system (`src/wechat/styles/default.ts`):
   - 默认极简风格 with WeChat native font stack

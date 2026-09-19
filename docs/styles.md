@@ -82,6 +82,7 @@ export const defaultStyles: StyleMap = {
 - `#6e6e73` — 次要文字（h4/h5、blockquote、代码注释）
 - `#86868b` — 辅助文字（h6、figcaption、删除线）
 - `#576b95` — WeChat 蓝（链接、脚注上标）
+- `#2e8555` — 术语色（`TERM_LINK_COLOR`，Wikipedia 等词条链接内联高亮，不生成脚注）
 - `#d2d2d7` — 分割线、边框（hr、blockquote border、th border）
 - `#e5e5ea` — 浅边框（td border）
 - `#f5f5f7` — 行内代码背景

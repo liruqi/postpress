@@ -35,7 +35,7 @@ src/
     │   ├── rehype-math.ts             # Math → MathJax self-contained SVG (optional, --math)
     │   ├── rehype-base64-images.ts    # Local images → sharp compress → base64
     │   ├── rehype-code-highlight.ts   # Syntax highlighting + whitespace protection
-    │   ├── rehype-footnote-links.ts   # External links → footnotes + References
+    │   ├── rehype-footnote-links.ts   # External links → footnotes + References; term hosts → colored text
     │   └── rehype-inline-styles.ts    # Default styles + hljs colors → inline style
     └── styles/                 # Style definitions
         └── default.ts          # 默认极简风格样式表 + 默认语法高亮主题
@@ -50,7 +50,7 @@ Markdown → remarkParse → remarkGfm → remarkRehype → rehypeRaw
   → 3. rehypeMath             (math → MathJax SVG data URI, opt-in via --math)
   → 4. rehypeBase64Images     (local images → sharp compress → base64 data URI, SVG kept vector)
   → 5. rehypeCodeHighlight    (syntax highlighting + whitespace protection)
-  → 6. rehypeFootnoteLinks    (external links → footnotes, preserve mp.weixin.qq.com)
+  → 6. rehypeFootnoteLinks    (external links → footnotes; term hosts → colored inline text)
   → 7. rehypeInlineStyles     (default styles + hljs colors → inline style attr, remove className)
   → rehypeStringify → HTML
 ```
@@ -162,7 +162,7 @@ src/
     │   ├── rehype-math.ts             # Math → MathJax self-contained SVG (optional, --math)
     │   ├── rehype-base64-images.ts    # Local images → sharp compress → base64
     │   ├── rehype-code-highlight.ts   # Syntax highlighting + whitespace protection
-    │   ├── rehype-footnote-links.ts   # External links → footnotes + References
+    │   ├── rehype-footnote-links.ts   # External links → footnotes + References; term hosts → colored text
     │   └── rehype-inline-styles.ts    # Default styles + hljs colors → inline style
     └── styles/                 # Style definitions
         └── default.ts          # 默认极简风格样式表 + 默认语法高亮主题
@@ -177,7 +177,7 @@ Markdown → remarkParse → remarkGfm → remarkRehype → rehypeRaw
   → 3. rehypeMath             (math → MathJax SVG data URI, opt-in via --math)
   → 4. rehypeBase64Images     (local images → sharp compress → base64 data URI, SVG kept vector)
   → 5. rehypeCodeHighlight    (syntax highlighting + whitespace protection)
-  → 6. rehypeFootnoteLinks    (external links → footnotes, preserve mp.weixin.qq.com)
+  → 6. rehypeFootnoteLinks    (external links → footnotes; term hosts → colored inline text)
   → 7. rehypeInlineStyles     (default styles + hljs colors → inline style attr, remove className)
   → rehypeStringify → HTML
 ```
@@ -264,6 +264,18 @@ Opt-in with `--math` (WeChat target only).
 - KaTeX is not an option: it emits HTML + CSS (`top` / `transform`), and the editor drops
   `position` and most `transform` values, so fractions collapse onto neighbouring lines
 - Read `docs/math.md` before modifying this plugin
+
+## Term Links (Wikipedia)
+
+Links to "term" hosts are **not** footnoted. `rehypeFootnoteLinks` replaces them with a
+`<span style="color: #2e8555;">` so the referenced noun is highlighted in place and no
+`<sup>[N]</sup>` / References entry is generated for it.
+
+- Default `termHosts`: `['en.wikipedia.org']` (matched exactly or as a subdomain suffix)
+- Default `termColor`: `TERM_LINK_COLOR` from `src/wechat/styles/default.ts` (`#2e8555`)
+- Pass `termHosts: []` to restore footnotes for every external link
+- Rationale: a Wikipedia URL is unreadable noise in a WeChat article body, and external
+  links are not clickable there anyway — the term itself is the useful part
 
 ## Operational Docs (`docs/`)
 
