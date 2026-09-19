@@ -291,10 +291,15 @@ function collectTargets(node: Root | Element, targets: Target[]): void {
 function buildImage(tex: string, display: boolean, rendered: RenderedMath): Element {
     const dataUri = `data:image/svg+xml;base64,${Buffer.from(rendered.svg, 'utf8').toString('base64')}`;
 
+    // rehypeInlineStyles applies the generic `img` style (margin, border-radius)
+    // on top of this, so neutralise both here — an inline formula must not
+    // inherit the 1.5em bottom margin that real images get.
     const style = display
-        ? 'display: block; margin: 1.2em auto; max-width: 100%; height: auto;'
+        ? 'display: block; margin: 1.2em auto; border-radius: 0; max-width: 100%; height: auto;'
         : [
               'display: inline',
+              'margin: 0',
+              'border-radius: 0',
               'max-width: 100%',
               'height: auto',
               rendered.verticalAlign
